@@ -2,3 +2,7 @@
 /target/
 /.idea/
 /SimbirsoftTestTask.iml
+/src/main/java/rafikov/uniqueWords/TestingDir/
+/src/main/java/rafikov/uniqueWords/testing/
+/sites/
+/src/test/java/Main.java
