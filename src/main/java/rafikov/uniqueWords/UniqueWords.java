@@ -8,6 +8,7 @@ import org.xml.sax.SAXException;
 import rafikov.uniqueWords.exceptions.DataBaseException;
 import rafikov.uniqueWords.exceptions.SiteConnectException;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -15,10 +16,12 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.function.Consumer;
 
-public class UniqueWords {
+public class UniqueWords implements AutoCloseable {
     private static final Logger logger = LoggerFactory.getLogger(UniqueWords.class);
 
     private String url;
@@ -59,6 +62,7 @@ public class UniqueWords {
             logger.debug("open readableByteChannel");
             ReadableByteChannel readableByteChannel = Channels.newChannel(new URL(url).openStream());
             logger.debug("open fileOutputStream");
+            new File("sites").mkdirs();
             FileOutputStream fileOutputStream = new FileOutputStream(path + fileName);
             logger.debug("transfer channel");
             fileOutputStream.getChannel()
@@ -78,37 +82,56 @@ public class UniqueWords {
         database.connect();
     }
 
-    public void parsePage() throws DataBaseException {
+    public void parsePage() throws DataBaseException, IOException, SAXException {
         logger.debug("creating htmlreader");
         HtmlReader reader = new HtmlReader() {
+            List<String> skipFilter =Arrays.asList(
+                    "head");
+            Queue<String> skipList = new LinkedList<>();
+
             List<String> formattingTags = Arrays.asList(
                     "strong", "b", "kbd",
                     "code", "samp", "big",
                     "small", "em", "i",
                     "dfn", "ins", "del",
-                    "sub","sup");
+                    "sub", "sup");
             int countTags;
-            final int limitTags = 20;
+            final int limitTags = 50;
+
             StringBuilder partOfHTML = new StringBuilder();
 
             @Override
             public void startElement(String namespaceURI, String localName, String qName, Attributes attributes) throws SAXException {
-                partOfHTML.append(String.format("<%s>", qName));
-                countTags++;
+                if (skipFilter.contains(qName)) {
+                    skipList.add(qName);
+                }
+                if (skipList.isEmpty()) {
+                    partOfHTML.append(String.format("<%s>", qName));
+                    countTags++;
+                }
             }
 
             @Override
             public void endElement(String namespaceURI, String localName, String qName) throws SAXException {
-                partOfHTML.append(String.format("</%s>", qName));
-                if (countTags >= limitTags && !formattingTags.contains(qName)) {
-                    calculateWords();
-                    countTags = 0;
+                if (!skipList.isEmpty()) {
+                    if (skipList.peek().equals(qName)) {
+                        skipList.poll();
+                    }
+                }
+                if (skipList.isEmpty()) {
+                    partOfHTML.append(String.format("</%s>", qName));
+                    if (countTags >= limitTags && !formattingTags.contains(qName)) {
+                        calculateWords();
+                        countTags = 0;
+                    }
                 }
             }
 
             @Override
             public void characters(char[] ch, int start, int length) throws SAXException {
-                partOfHTML.append(new String(ch, start, length));
+                if (skipList.isEmpty()) {
+                    partOfHTML.append(new String(ch, start, length));
+                }
             }
 
             @Override
@@ -125,9 +148,8 @@ public class UniqueWords {
         database.createTable();
         long time = System.currentTimeMillis();
         logger.info("Page parse started");
-        reader.read(path+fileName);
+        reader.read(path + fileName);
         logger.info("Page parsed and writing to database in: {}{}", (double) (System.currentTimeMillis() - time) / 1000, "s");
-        database.close();
     }
 
     private String normalizeText(String line) {
@@ -145,22 +167,31 @@ public class UniqueWords {
             if (word.length() == 1 && !word.matches("[A-ZА-Я\\d]")) {
                 continue;
             }
-            wordsMap.put(word, wordsMap.containsKey(word) ? wordsMap.get(word)+1 : 1);
+            wordsMap.put(word, wordsMap.containsKey(word) ? wordsMap.get(word) + 1 : 1);
         }
         wordsMap.forEach((word, count) -> {
-                try {
-                    logger.debug("in database sent word={}, count={}", word, count);
-                    database.addWord(word, count);
-                } catch (DataBaseException ex) {
-                    logger.error("cant add word={}", word, ex);
-                    System.err.println("Word " + word + " not added");
-                }
+            try {
+                logger.debug("in database sent word={}, count={}", word, count);
+                database.addWord(word, count);
+            } catch (DataBaseException ex) {
+                logger.error("cant add word={}", word, ex);
+                System.err.println("Word " + word + " not added");
+            }
         });
         wordsMap.clear();
         database.commit();
     }
 
     public void printUniqueWords(Consumer<String> printer) {
-        printer.accept("ny tipa rezultat hyli");
+        database.printWordsTable("%d. %s: %d", printer);
+    }
+
+    public int getCountWords() throws DataBaseException {
+        return database.getCountWords();
+    }
+
+    @Override
+    public void close() {
+        database.close();
     }
 }

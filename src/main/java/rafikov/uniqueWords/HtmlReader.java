@@ -4,20 +4,19 @@ import org.ccil.cowan.tagsoup.Parser;
 import org.xml.sax.*;
 import org.xml.sax.helpers.DefaultHandler;
 
+import java.io.IOException;
+
 public class HtmlReader extends DefaultHandler {
     public HtmlReader() {
     }
 
-    public void read(String filePath) {
+    public void read(String filePath) throws IOException, SAXException {
         Parser parser = new Parser();
-        try {
-            parser.setContentHandler(this);
-            parser.setErrorHandler(this);
-            InputSource source = new InputSource(filePath);
-            parser.parse(source);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        parser.setContentHandler(this);
+        parser.setErrorHandler(this);
+        InputSource source = new InputSource(filePath);
+        source.setEncoding("UTF-8");
+        parser.parse(source);
     }
 
     @Override
