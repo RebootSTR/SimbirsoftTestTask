@@ -1,4 +1,4 @@
-package rafikov.uniqueWords;
+package rafikov.uniqueWords.exceptions;
 
 public class SiteConnectException extends Exception {
     public SiteConnectException(String url) {
@@ -11,10 +11,6 @@ public class SiteConnectException extends Exception {
 
     public SiteConnectException(Throwable cause) {
         super(cause);
-    }
-
-    public SiteConnectException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace) {
-        super(message, cause, enableSuppression, writableStackTrace);
     }
 
     public SiteConnectException() {

@@ -1,8 +1,12 @@
 package rafikov.uniqueWords;
 
 import org.jsoup.Jsoup;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
+import rafikov.uniqueWords.exceptions.DataBaseException;
+import rafikov.uniqueWords.exceptions.SiteConnectException;
 
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -11,15 +15,16 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
-import java.text.Normalizer;
 import java.util.*;
-
-import static jdk.nashorn.internal.ir.debug.ObjectSizeCalculator.getObjectSize;
+import java.util.function.Consumer;
 
 public class UniqueWords {
+    private static final Logger logger = LoggerFactory.getLogger(UniqueWords.class);
+
     private String url;
     private String path;
     private String fileName;
+    private DBHandler database;
     private HashMap<String, Integer> wordsMap = new HashMap<>();
 
     public UniqueWords(String url, String path) {
@@ -32,11 +37,11 @@ public class UniqueWords {
     }
 
     public void setURL(String url) {
-        if (url.matches(".*/")) {
-            this.url = url.substring(0, url.length()-1);
-        } else {
-            this.url = url;
+        if (!url.matches("https?://.*")) {
+            logger.debug("adding https:// to URL. URL={}", url);
+            url = "https://" + url;
         }
+        this.url = url;
         fileName = generateNameFromUrl(this.url);
     }
 
@@ -45,15 +50,20 @@ public class UniqueWords {
     }
 
     private String generateNameFromUrl(String url) {
+        logger.debug("generating filename for url={}", url);
         return url.split("/")[2] + ".html";
     }
 
     public void loadPage() throws SiteConnectException {
         try {
+            logger.debug("open readableByteChannel");
             ReadableByteChannel readableByteChannel = Channels.newChannel(new URL(url).openStream());
+            logger.debug("open fileOutputStream");
             FileOutputStream fileOutputStream = new FileOutputStream(path + fileName);
+            logger.debug("transfer channel");
             fileOutputStream.getChannel()
                     .transferFrom(readableByteChannel, 0, Long.MAX_VALUE);
+            logger.info("Page loaded!");
         } catch (MalformedURLException | FileNotFoundException ex) {
             ex.printStackTrace();
         } catch (IOException ex) {
@@ -61,7 +71,15 @@ public class UniqueWords {
         }
     }
 
-    public void parsePage() {
+    private void databaseConnect() throws DataBaseException {
+        database = DBHandler.getInstance(
+                "unique words.db",
+                "`" + fileName.replaceAll("\\.", "_") + "`");
+        database.connect();
+    }
+
+    public void parsePage() throws DataBaseException {
+        logger.debug("creating htmlreader");
         HtmlReader reader = new HtmlReader() {
             List<String> formattingTags = Arrays.asList(
                     "strong", "b", "kbd",
@@ -103,27 +121,46 @@ public class UniqueWords {
                 partOfHTML.delete(0, partOfHTML.length());
             }
         };
+        databaseConnect();
+        database.createTable();
+        long time = System.currentTimeMillis();
+        logger.info("Page parse started");
         reader.read(path+fileName);
+        logger.info("Page parsed and writing to database in: {}{}", (double) (System.currentTimeMillis() - time) / 1000, "s");
+        database.close();
     }
 
     private String normalizeText(String line) {
+        logger.debug("text started to normalize: {}", line);
         line = line.replaceAll("[,.!?\";:\\[\\]()\n\r\t«»]", " ");
         line = line.replaceAll("\\s{2,}", " ");
         return line.toUpperCase();
     }
 
     private void sendInDB(String[] words) {
+        logger.debug("Send in db started");
         for (String word : words) {
-            if (word.matches("[\\s-]") || word.length() == 0)
+            if (word.length() == 0)
                 continue;
+            if (word.length() == 1 && !word.matches("[A-ZА-Я\\d]")) {
+                continue;
+            }
             wordsMap.put(word, wordsMap.containsKey(word) ? wordsMap.get(word)+1 : 1);
         }
-        // TODO: hashmap clear and DB
+        wordsMap.forEach((word, count) -> {
+                try {
+                    logger.debug("in database sent word={}, count={}", word, count);
+                    database.addWord(word, count);
+                } catch (DataBaseException ex) {
+                    logger.error("cant add word={}", word, ex);
+                    System.err.println("Word " + word + " not added");
+                }
+        });
+        wordsMap.clear();
+        database.commit();
     }
 
-    public String calculateUniqueWords() {
-        System.out.printf("%f Кб\n", (double)getObjectSize(wordsMap) / 1024 );
-        wordsMap.forEach((key,value) -> System.out.println(key + ": " + value));
-        return "complete";
+    public void printUniqueWords(Consumer<String> printer) {
+        printer.accept("ny tipa rezultat hyli");
     }
 }
