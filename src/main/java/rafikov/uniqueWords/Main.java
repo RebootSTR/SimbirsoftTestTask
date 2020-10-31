@@ -4,17 +4,21 @@ import org.apache.log4j.xml.DOMConfigurator;
 import rafikov.uniqueWords.exceptions.DataBaseException;
 import rafikov.uniqueWords.exceptions.SiteConnectException;
 
-import javax.xml.parsers.FactoryConfigurationError;
-import java.io.FileNotFoundException;
+import java.io.File;
 import java.io.IOException;
 import java.util.Scanner;
 
 public class Main {
+
     final static Scanner scanner = new Scanner(System.in);
 
     public static void main(String[] args) {
         // loading logger xml file
-        DOMConfigurator.configure("./resources/log4j.xml");
+        if (new File("./resources/log4j.xml").isFile()) {
+            DOMConfigurator.configure("./resources/log4j.xml");
+        } else {
+            println("WARN: XML config dor logger not found. Please, add it: ./resources/log4j.xml");
+        }
         println("Enter the URL");
         UniqueWords uniqueWords = new UniqueWords(scanner.nextLine());
         try {

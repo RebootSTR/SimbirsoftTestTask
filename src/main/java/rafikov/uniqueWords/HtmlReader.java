@@ -6,10 +6,21 @@ import org.xml.sax.helpers.DefaultHandler;
 
 import java.io.IOException;
 
+/**
+ * Class Extends DefaultHandler SAX classes.
+ * @author Aydar Rafikov
+ */
 public class HtmlReader extends DefaultHandler {
+
     public HtmlReader() {
     }
 
+    /**
+     * Start parsing html file in filepath.
+     * @param filePath path to html file
+     * @throws IOException Cant open file.
+     * @throws SAXException Problems with parsing.
+     */
     public void read(String filePath) throws IOException, SAXException {
         Parser parser = new Parser();
         parser.setContentHandler(this);
@@ -25,21 +36,17 @@ public class HtmlReader extends DefaultHandler {
     }
 
     @Override
-    public void startElement(String namespaceURI, String localName,
-                             String qName, Attributes attributes) throws SAXException {
-        System.out.print("End element: ");
-        System.out.println(qName);
+    public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException {
+        super.startElement(uri, localName, qName, attributes);
     }
 
     @Override
-    public void endElement(String namespaceURI, String localName, String qName) throws SAXException {
-        System.out.print("End element: ");
-        System.out.println(qName);
+    public void endElement(String uri, String localName, String qName) throws SAXException {
+        super.endElement(uri, localName, qName);
     }
 
     @Override
     public void characters(char[] ch, int start, int length) throws SAXException {
-        System.out.print("characters: ");
-        System.out.println(new String(ch, start, length));
+        super.characters(ch, start, length);
     }
 }

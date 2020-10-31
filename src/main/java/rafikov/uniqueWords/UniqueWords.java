@@ -16,29 +16,45 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.*;
 import java.util.function.Consumer;
 
+
+/**
+ * Class for getting the number of unique words for a page on the Internet.
+ * @author Aydar Rafikov
+ */
 public class UniqueWords implements AutoCloseable {
+
     private static final Logger logger = LoggerFactory.getLogger(UniqueWords.class);
 
     private String url;
     private String path;
     private String fileName;
     private DBHandler database;
-    private HashMap<String, Integer> wordsMap = new HashMap<>();
+    private final HashMap<String, Integer> wordsMap = new HashMap<>();
 
+    /**
+     * @param url  page url
+     * @param path path to local copy page
+     */
     public UniqueWords(String url, String path) {
         setURL(url);
         setPath(path);
     }
 
+    /**
+     * @param url page url
+     */
     public UniqueWords(String url) {
         this(url, "sites/");
     }
 
+    /**
+     * Method for changing URL.
+     *
+     * @param url page url
+     */
     public void setURL(String url) {
         if (!url.matches("https?://.*")) {
             logger.debug("adding https:// to URL. URL={}", url);
@@ -48,6 +64,11 @@ public class UniqueWords implements AutoCloseable {
         fileName = generateNameFromUrl(this.url);
     }
 
+    /**
+     * Method for set path to page local copy.
+     *
+     * @param path file path
+     */
     public void setPath(String path) {
         this.path = path;
     }
@@ -57,6 +78,11 @@ public class UniqueWords implements AutoCloseable {
         return url.split("/")[2] + ".html";
     }
 
+    /**
+     * Load page from Internet to path
+     *
+     * @throws SiteConnectException Throw if cant connect to site.
+     */
     public void loadPage() throws SiteConnectException {
         try {
             logger.debug("open readableByteChannel");
@@ -82,23 +108,31 @@ public class UniqueWords implements AutoCloseable {
         database.connect();
     }
 
+    /**
+     * Method starts parsing page local copy. Saves all unique words in database.
+     *
+     * @throws DataBaseException Some problems with database.
+     * @throws IOException       Not found page local copy e.t.c.
+     * @throws SAXException      File cant be parsed. Maybe its not html file.
+     */
     public void parsePage() throws DataBaseException, IOException, SAXException {
-        logger.debug("creating htmlreader");
+        logger.debug("creating htmlReader");
         HtmlReader reader = new HtmlReader() {
-            List<String> skipFilter =Arrays.asList(
+            final List<String> skipFilter = Arrays.asList(
                     "head");
-            Queue<String> skipList = new LinkedList<>();
+            final Queue<String> skipList = new LinkedList<>();
 
-            List<String> formattingTags = Arrays.asList(
+            final List<String> formattingTags = Arrays.asList(
                     "strong", "b", "kbd",
                     "code", "samp", "big",
                     "small", "em", "i",
                     "dfn", "ins", "del",
                     "sub", "sup");
             int countTags;
+            // the higher the value, the more RAM is required, BUT it works faster
             final int limitTags = 50;
 
-            StringBuilder partOfHTML = new StringBuilder();
+            final StringBuilder partOfHTML = new StringBuilder();
 
             @Override
             public void startElement(String namespaceURI, String localName, String qName, Attributes attributes) throws SAXException {
@@ -182,10 +216,21 @@ public class UniqueWords implements AutoCloseable {
         database.commit();
     }
 
+    /**
+     * Method prints all unique words in printer.
+     *
+     * @param printer string consumer
+     */
     public void printUniqueWords(Consumer<String> printer) {
         database.printWordsTable("%d. %s: %d", printer);
     }
 
+    /**
+     * Method gives count unique words for accepted URL in DataBase.
+     *
+     * @return count unique words
+     * @throws DataBaseException Some problems with DataBase.
+     */
     public int getCountWords() throws DataBaseException {
         return database.getCountWords();
     }

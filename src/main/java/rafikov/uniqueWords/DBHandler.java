@@ -8,7 +8,12 @@ import java.io.File;
 import java.sql.*;
 import java.util.function.Consumer;
 
+/**
+ * Class for write unique words in database.
+ * @author Aydar Rafikov
+ */
 public class DBHandler implements AutoCloseable {
+
     private static final Logger logger = LoggerFactory.getLogger(DBHandler.class);
 
     private String insertSQL;
@@ -31,6 +36,12 @@ public class DBHandler implements AutoCloseable {
         fillSqlQueries();
     }
 
+    /**
+     * Return single instance class.
+     * @param baseName name database
+     * @param tableName name table in database
+     * @return DBHandler instance
+     */
     public static synchronized DBHandler getInstance(String baseName, String tableName) {
         if (instance == null)
             instance = new DBHandler(baseName, tableName);
@@ -49,6 +60,11 @@ public class DBHandler implements AutoCloseable {
         selectSQL = "select id, word, count from " + tableName;
     }
 
+    /**
+     * Connecting to DataBase.
+     * @return this instance
+     * @throws DataBaseException Cant open connection with DataBase.
+     */
     public DBHandler connect() throws DataBaseException {
         try {
             // register Driver
@@ -65,6 +81,10 @@ public class DBHandler implements AutoCloseable {
         return this;
     }
 
+    /**
+     * Create (overwrite) table.
+     * @throws DataBaseException Cant execute query.
+     */
     public void createTable() throws DataBaseException {
         logger.debug("creating table with name={}", tableName);
         executeChangingQuery(dropTableSQL);
@@ -91,11 +111,24 @@ public class DBHandler implements AutoCloseable {
         }
     }
 
+    /**
+     * Add word and count to DataBase.
+     * If this word exists, past count adding with current.
+     * @param word word
+     * @param count count words
+     * @throws DataBaseException Cant execute query.
+     */
     public void addWord(String word, int count) throws DataBaseException {
         updateWord(word, count);
         insertWord(word, count);
     }
 
+
+    /**
+     * Method prints all unique words in table in printer.
+     * @param format string format to write
+     * @param printer string consumer
+     */
     public void printWordsTable(String format, Consumer<String> printer) {
         logger.debug("formatString=\"{}\", query={}", format, selectSQL);
         try (Statement statement = this.connection.createStatement()) {
@@ -112,6 +145,11 @@ public class DBHandler implements AutoCloseable {
         }
     }
 
+    /**
+     * Method gives count unique words for accepted table in DataBase.
+     * @return count unique words
+     * @throws DataBaseException Some problems with DataBase.
+     */
     public int getCountWords() throws DataBaseException {
         try (Statement statement = this.connection.createStatement()) {
             ResultSet result = statement.executeQuery("select count(*) from " + tableName);
@@ -122,6 +160,9 @@ public class DBHandler implements AutoCloseable {
         }
     }
 
+    /**
+     * Do committing changes in DataBase.
+     */
     public void commit() {
         try {
             if (connection != null) {
