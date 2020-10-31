@@ -10,6 +10,7 @@ import java.util.function.Consumer;
 
 /**
  * Class for write unique words in database.
+ *
  * @author Aydar Rafikov
  */
 public class DBHandler implements AutoCloseable {
@@ -38,7 +39,8 @@ public class DBHandler implements AutoCloseable {
 
     /**
      * Return single instance class.
-     * @param baseName name database
+     *
+     * @param baseName  name database
      * @param tableName name table in database
      * @return DBHandler instance
      */
@@ -50,11 +52,11 @@ public class DBHandler implements AutoCloseable {
 
     private void fillSqlQueries() {
         insertSQL = "INSERT INTO " + tableName + " (word, `count`) " +
-                    "SELECT ?, ? " +
-                    "WHERE (Select Changes() = 0)";
+                "SELECT ?, ? " +
+                "WHERE (Select Changes() = 0)";
         updateSQL = "UPDATE " + tableName + " " +
-                    "SET count=(SELECT `count` from " + tableName + " where word=?)+? " +
-                    "WHERE word=?";
+                "SET count=(SELECT `count` from " + tableName + " where word=?)+? " +
+                "WHERE word=?";
         dropTableSQL = "drop table if exists " + tableName;
         createTableSQL = "create table if not exists " + tableName + " ('id' INTEGER PRIMARY KEY AUTOINCREMENT, 'word' TEXT, 'count' INTEGER);";
         selectSQL = "select id, word, count from " + tableName;
@@ -62,6 +64,7 @@ public class DBHandler implements AutoCloseable {
 
     /**
      * Connecting to DataBase.
+     *
      * @return this instance
      * @throws DataBaseException Cant open connection with DataBase.
      */
@@ -83,6 +86,7 @@ public class DBHandler implements AutoCloseable {
 
     /**
      * Create (overwrite) table.
+     *
      * @throws DataBaseException Cant execute query.
      */
     public void createTable() throws DataBaseException {
@@ -102,7 +106,7 @@ public class DBHandler implements AutoCloseable {
     private void executeChangingQuery(String SQL, Object... params) throws DataBaseException {
         try (PreparedStatement statement = this.connection.prepareStatement(SQL)) {
             for (int i = 1; i <= params.length; i++) {
-                statement.setObject(i, params[i-1]);
+                statement.setObject(i, params[i - 1]);
             }
             statement.execute();
         } catch (SQLException ex) {
@@ -114,7 +118,8 @@ public class DBHandler implements AutoCloseable {
     /**
      * Add word and count to DataBase.
      * If this word exists, past count adding with current.
-     * @param word word
+     *
+     * @param word  word
      * @param count count words
      * @throws DataBaseException Cant execute query.
      */
@@ -126,7 +131,8 @@ public class DBHandler implements AutoCloseable {
 
     /**
      * Method prints all unique words in table in printer.
-     * @param format string format to write
+     *
+     * @param format  string format to write
      * @param printer string consumer
      */
     public void printWordsTable(String format, Consumer<String> printer) {
@@ -147,6 +153,7 @@ public class DBHandler implements AutoCloseable {
 
     /**
      * Method gives count unique words for accepted table in DataBase.
+     *
      * @return count unique words
      * @throws DataBaseException Some problems with DataBase.
      */

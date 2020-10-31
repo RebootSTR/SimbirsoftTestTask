@@ -22,6 +22,7 @@ import java.util.function.Consumer;
 
 /**
  * Class for getting the number of unique words for a page on the Internet.
+ *
  * @author Aydar Rafikov
  */
 public class UniqueWords implements AutoCloseable {
@@ -129,7 +130,10 @@ public class UniqueWords implements AutoCloseable {
                     "dfn", "ins", "del",
                     "sub", "sup");
             int countTags;
-            // the higher the value, the more RAM is required, BUT it works faster
+            /*
+            Number of tags required to start text processing.
+            The higher the value, the more RAM is required, BUT it works faster.
+             */
             final int limitTags = 50;
 
             final StringBuilder partOfHTML = new StringBuilder();

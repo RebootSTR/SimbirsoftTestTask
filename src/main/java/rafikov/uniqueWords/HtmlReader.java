@@ -8,6 +8,7 @@ import java.io.IOException;
 
 /**
  * Class Extends DefaultHandler SAX classes.
+ *
  * @author Aydar Rafikov
  */
 public class HtmlReader extends DefaultHandler {
@@ -17,8 +18,9 @@ public class HtmlReader extends DefaultHandler {
 
     /**
      * Start parsing html file in filepath.
+     *
      * @param filePath path to html file
-     * @throws IOException Cant open file.
+     * @throws IOException  Cant open file.
      * @throws SAXException Problems with parsing.
      */
     public void read(String filePath) throws IOException, SAXException {
